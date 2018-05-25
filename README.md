@@ -1,140 +1,51 @@
-# EAK
+# [Uatu - Elastic APM](https://www.elastic.co/solutions/apm)
 
-<!-- TOC -->
+Elastic APM, a open source application performance monitoring tool. This repo consists of Dockerfile and docker compose file to setup APM.
 
-- [EAK](#eak)
-- [Quick Run](#quick-run)
-- [Remarks](#remarks)
-- [Resources](#resources)
-- [Waterline](#waterline)
-  - [Example](#example)
+![](https://www.elastic.co/assets/blt55027d175d758616/animation-apm-app.gif)
 
-<!-- /TOC -->
+## Bring up Docker
+* Change secret token for your app. In ```apm-server.yml``` file, change ```somerandomstring```. Remember this token.
+* build docker image: ```docker build -t elastic-apm-server:6.2.4 .```
+* run docker compose: ```docker-compose up -d```.  This will take some time as it waits for elastic-search and kibana service to start.
+* check if all containers are up.  ```docker-compose ps```
+* Kibana will run on port:8200 and apm-server on port:5601. 
+* port 8200 is used to visualize data, and port 5601 is to ping data from your app
 
-elasticsearch apm-server kibana
+## Configure Your App
+* Refer [this](https://www.elastic.co/guide/en/apm/agent/python/current/django-support.html) page to setup and [this](https://www.elastic.co/guide/en/apm/agent/python/current/configuration.html#config-debug) page to configure.
+* Install python agent: ```pip install elastic-apm```
+* Add ```elasticapm.contrib.django``` to ```INSTALLED_APPS``` in your settings
+* Add ```elasticapm.contrib.django.middleware.TracingMiddleware``` at first to ```MIDDLEWARE``` in your settings
+* Example config in your Django settings:
 
-# Quick Run
+    ```python
+    # Elastic APM
+    APM_ENABLED = env.bool('APM_ENABLED', default=True)
+    if APM_ENABLED:
+        INSTALLED_APPS.append('elasticapm.contrib.django')
+        # middleware should be first for best results
+        MIDDLEWARE.insert(0, 'elasticapm.contrib.django.middleware.TracingMiddleware')
+        ELASTIC_APM = {
+            "DEBUG": True,  # monitor when app is in DEBUG mode
+            'SERVICE_NAME': env('APM_SERVICE_NAME', default='My App'),  # name for your app
+            # token is configured in APM server. Do not change
+            'SECRET_TOKEN': env('APM_SECRET_TOKEN', default='somerandomstring'), # this is token you put in apm-server.yml file
+            'SERVER_URL': env('APM_SERVER_URL', default='http://localhost:8200') # this is kibana endpoint
+        }
+    ```
+* Run ```python manage.py elasticapm check``` to check if everything is configured properly.
+* Run ```python manage.py elasticapm test``` to send sample error to APM
 
-```sh
-wget https://raw.githubusercontent.com/yidinghan/eak/master/docker-compose.yml
-docker-compose up -d
-```
-
-Go to `localhost:5601`, or what your IP is
-
-Wait for kibana to be available, then you are ready to try apm
-
-# Remarks
-- with [apm-agent-nodejs:v1.1.0](https://github.com/elastic/apm-agent-nodejs/tree/v1.1.0)
-  - start method
-
-  ```js
-  // change from
-  require('elastic-apm-node/start');
-  // to
-  require('elastic-apm-node').start();
-  ```
-  - `elastic-apm-node.js` config change
-  ```js
-  // change from
-  appName: 'apm-reseach',
-  // to
-  serviceName: 'apm-reseach',
-  ```
-
-- with [docker.elastic.co/kibana/kibana:6.2.2](https://github.com/elastic/kibana/tree/6.2.2)
-  - New tab `APM` is ready to go
-
-   ![](http://om4h4iqhe.bkt.clouddn.com/kibana-apm-services.jpg)
-   ![](http://om4h4iqhe.bkt.clouddn.com/kibana-apm-service.jpg)
-   ![](http://om4h4iqhe.bkt.clouddn.com/kibana-apm-request.jpg)
-   ![](http://om4h4iqhe.bkt.clouddn.com/kibana-apm-pg-span.jpg)
-
-- with [playdingnow/elastic-apm-server:1.5.0](https://github.com/yidinghan/elastic-apm-server/tree/1.5.0)
-  - drop `Waterline` from dashboard temporary
-- with [docker.elastic.co/kibana/kibana:6.1.1](https://github.com/elastic/kibana/tree/6.1.1)
-  - A new tab named `APM` appears in the left sidebar
-
-   ![](http://om4h4iqhe.bkt.clouddn.com/kibana-tab-apm.jpg)
-
-- with [playdingnow/elastic-apm-server:1.4.3](https://github.com/yidinghan/elastic-apm-server/tree/1.4.3)
-   - The default `apm-dashboards.json` have been changed to customize [data](https://github.com/yidinghan/elastic-apm-server/blob/master/apm-dashboards.json)
-   - One more `visualization` chart name is [Waterline](#waterline)
-
-   ![](http://om4h4iqhe.bkt.clouddn.com/apm-waterline.jpg)
-
-- with [playdingnow/elastic-apm-server:v1.2](https://github.com/yidinghan/elastic-apm-server/tree/v1.2)
-   - The default secret_token have been changed from `''` to `xxVpmQB2HMzCL9PgBHVrnxjNXXw5J7bd79DFm6sjBJR5HPXDhcF8MSb3vv4bpg44`
-- with compose 2.2 feature, [healthcheck](https://docs.docker.com/compose/compose-file/compose-file-v2/#healthcheck)
-   - your may need to wait a while in the `up` stage
-   - because kibana depends on es
-   - apm-server depends on es and kibana
-- apm-server may exit before elasticsearch is ready
-   - exit status could be found by `docker-compose ps`
-   - once exit then you should restart it, like `docker-compose up -d`
-
-# Resources
-- docker elastic: https://www.docker.elastic.co/
-- elasticsearch
-  - image: `docker pull docker.elastic.co/elasticsearch/elasticsearch:6.1.1`
-  - github: https://github.com/elastic/elasticsearch
-  - docker: https://www.elastic.co/guide/en/elasticsearch/reference/6.0/docker.html
-  - vm.max_map_count: https://github.com/docker-library/elasticsearch/issues/111#issuecomment-268989731
-  ```shell
-  $ grep vm.max_map_count /etc/sysctl.conf
-  vm.max_map_count=262144
-
-  $ sysctl -w vm.max_map_count=262144
-  ```
-- apm-server
-  - image: `docker pull docker.elastic.co/apm/apm-server:6.2.2`
-  - github: https://github.com/elastic/apm-server
-  - docker: https://www.elastic.co/guide/en/apm/server/current/running-on-docker.html
-  - config: https://github.com/elastic/apm-server/blob/master/apm-server.reference.yml
-- kibana
-  - image: `docker pull docker.elastic.co/kibana/kibana:6.2.2`
-  - github: https://github.com/elastic/kibana
-  - docker: https://www.elastic.co/guide/en/kibana/6.0/docker.html
-- apm agent
-  - nodejs: https://www.elastic.co/guide/en/apm/agent/nodejs/current/intro.html
-    - agent api: https://www.elastic.co/guide/en/apm/agent/nodejs/current/agent-api.html
-    - github: https://github.com/elastic/apm-agent-nodejs
-- customized-apm-server
-  - image: `docker pull playdingnow/elastic-apm-server:1.5.0`
-  - github: https://github.com/yidinghan/elastic-apm-server
-
-# Waterline
-
-The higher the waterline, the higher the service load, formula is as follows
-
-```js
-waterline = sum([waterline_0, waterline_1, ..., waterline_n]) / count(duration)
-
-waterline_x = count(duration, [border_x_start, border_x_end]) * a_x
-```
-
-Where
-
-- duration is `transaction.duration.us`
-- border_x is interval border, like [0, 100] means from 0ms to 100ms
-- a_x is interval coefficient of border_x, like 1/2/100 or whatever you want
+Once your app is up and running, visit your ```SERVER_URL``` and navigate to APM
 
 
-## Example
+Note:
+* If docker-compose fails with message: ```ERROR: for apm-server  Container "*******" is unhealthy.
+ERROR: Encountered errors while bringing up the project.```, increase healthcheck retries count for kibana service in docker-compose file.
 
-```js
-waterline = ( count(duration, [0, 200]) * 1 + count(duration, [200, *]) * 2 ) / count(duration)
-```
+Version:
+    - elasticsearch:6.2.4
+    - kibana:6.2.4
 
-In a point
-
-```js
-10 = count(duration, [0, 200])
-1 = count(duration, [200, *])
-```
-
-Then, in 3 decimal places precision
-
-```js
-waterline = ( 10 * 1 + 1 * 2 ) / 11 = 1.091
-```
+Inspired by: https://github.com/yidinghan/eak
