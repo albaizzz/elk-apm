@@ -31,7 +31,8 @@ Elastic APM, a open source application performance monitoring tool. This repo co
             'SERVICE_NAME': env('APM_SERVICE_NAME', default='My App'),  # name for your app
             # token is configured in APM server. Do not change
             'SECRET_TOKEN': env('APM_SECRET_TOKEN', default='somerandomstring'), # this is token you put in apm-server.yml file
-            'SERVER_URL': env('APM_SERVER_URL', default='http://localhost:8200') # this is kibana endpoint
+            'SERVER_URL': env('APM_SERVER_URL', default='http://localhost:8200'), # this is kibana endpoint
+            'CAPTURE_BODY': 'all'
         }
     ```
 * Run ```python manage.py elasticapm check``` to check if everything is configured properly.
