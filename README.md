@@ -5,7 +5,7 @@ Elastic APM, a open source application performance monitoring tool. This repo co
 ![](https://www.elastic.co/assets/blt55027d175d758616/animation-apm-app.gif)
 
 ## Bring up Docker
-* Change secret token for your app. In ```apm-server.yml``` file, change ```somerandomstring```. Remember this token.
+* Change secret token for your app. In ```apm-server.yml``` file, change ```somerandomstring```. Note this token.
 * build docker image: ```docker build -t elastic-apm-server:6.2.4 .```
 * run docker compose: ```docker-compose up -d```.  This will take some time as it waits for elastic-search and kibana service to start.
 * check if all containers are up.  ```docker-compose ps```
