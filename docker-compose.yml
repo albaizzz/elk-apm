@@ -1,50 +1,56 @@
-version: "2.2"
+version: "3"
 
 services:
-    elasticsearch:
-        image: docker.elastic.co/elasticsearch/elasticsearch:7.6.2
-        environment:
-            - xpack.security.enabled=false
-            - ES_JAVA_OPTS=-Xms512m -Xmx512m
-        ports:
-            - 9500:9200
-        healthcheck:
-            test: ["CMD", "curl", "-f", "http://localhost:9200"]
-            interval: 30s
-            timeout: 10s
-            retries: 5
-        volumes:
-            - "es_data:/usr/share/elasticsearch/data"
-
-    kibana:
-        image: docker.elastic.co/kibana/kibana:7.6.2
-        ports:
-            - 5601:5601
-        depends_on:
-            elasticsearch:
-                condition: service_healthy
-        healthcheck:
-            test: ["CMD", "curl", "-f", "http://localhost:5601"]
-            interval: 30s
-            timeout: 10s
-            retries: 5
-
+ 
     apm-server:
-        image: docker.elastic.co/apm/apm-server:7.6.2
+        container_name: apm-server-container
+        image: store/elastic/apm-server:7.2.1
+        user: apm-server
         ports:
-            - 8200:8200
+            - "7200:7200"
+        depends_on: ["elasticsearch", "kibana"]
+        volumes:
+            - ./apm-conf/apm-server.yml:/usr/share/apm-server/apm-server.yml
+        command: /usr/share/apm-server/apm-server -e -c /usr/share/apm-server/apm-server.yml -E apm-server.host=apm-server:7200 --strict.perms=false
+        healthcheck:
+            test: ["CMD", "curl", "-s", "-f", "http://localhost:7200/polls"]
+            retries: 6
+        
+
+    elasticsearch:
+        container_name: elasticsearch-container
+        image: docker.io/elasticsearch:7.2.1
         environment:
-            - output.elasticsearch.hosts=['http://elasticsearch:9200']
-            - apm-server.host="0.0.0.0:8200"
-            - apm-server.secret_token="xxVpmQB2HMzCL9PgBHVrnxjNXXw5J7bd79DFm6sjBJR5HPXDhcF8MSb3vv4bpg44"
-            - setup.kibana.host="kibana:5601"
-            - setup.template.enabled=true
-            - logging.to_files=false
-        depends_on:
-            elasticsearch:
-                condition: service_healthy
-            kibana:
-                condition: service_healthy
+                discovery.type: single-node
+        ulimits:
+            memlock:
+                soft: -1
+                hard: -1
+        volumes:
+            - esdata:/usr/share/elasticsearch/data
+        ports:
+            - "9200:9200"
+            - "9300:9300"
+        healthcheck:
+            test: ["CMD", "curl","-s" ,"-f", "http://localhost:9200/_cat/health"]
+    
+    kibana:
+        container_name: kibana-container
+        hostname: kibana
+        image: docker.io/kibana:7.2.1
+        #volumes:
+        #  - ./kibana.yml:/usr/share/kibana/kibana.yml
+        environment:
+            ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+        ports: ['5601:5601']
+        # depends_on: ["elasticsearch"]
+        restart: on-failure
+        healthcheck:
+            test: ["CMD", "curl", "-s", "-f", "http://localhost:5601/"]
+            retries: 6
+        
+    
 
 volumes:
-    es_data:
+    esdata:
+        driver: local
