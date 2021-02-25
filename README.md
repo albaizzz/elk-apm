@@ -12,32 +12,6 @@ Elastic APM, a open source application performance monitoring tool. This repo co
 * Kibana will run on port:8200 and apm-server on port:5601. 
 * port 8200 is used to visualize data, and port 5601 is to ping data from your app
 
-## Configure Your App
-* Refer [this](https://www.elastic.co/guide/en/apm/agent/python/current/django-support.html) page to setup and [this](https://www.elastic.co/guide/en/apm/agent/python/current/configuration.html#config-debug) page to configure.
-* Install python agent: ```pip install elastic-apm```
-* Add ```elasticapm.contrib.django``` to ```INSTALLED_APPS``` in your settings
-* Add ```elasticapm.contrib.django.middleware.TracingMiddleware``` at first to ```MIDDLEWARE``` in your settings
-* Example config in your Django settings:
-
-    ```python
-    # Elastic APM
-    APM_ENABLED = env.bool('APM_ENABLED', default=True)
-    if APM_ENABLED:
-        INSTALLED_APPS.append('elasticapm.contrib.django')
-        # middleware should be first for best results
-        MIDDLEWARE.insert(0, 'elasticapm.contrib.django.middleware.TracingMiddleware')
-        ELASTIC_APM = {
-            "DEBUG": True,  # monitor when app is in DEBUG mode
-            'SERVICE_NAME': env('APM_SERVICE_NAME', default='My App'),  # name for your app
-            # token is configured in APM server. Do not change
-            'SECRET_TOKEN': env('APM_SECRET_TOKEN', default='somerandomstring'), # this is token you put in apm-server.yml file
-            'SERVER_URL': env('APM_SERVER_URL', default='http://localhost:8200'), # this is kibana endpoint
-            'CAPTURE_BODY': 'all'
-        }
-    ```
-* Run ```python manage.py elasticapm check``` to check if everything is configured properly.
-* Run ```python manage.py elasticapm test``` to send sample error to APM
-
 Once your app is up and running, visit your ```SERVER_URL``` and navigate to APM
 
 
