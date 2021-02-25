@@ -1,7 +1,6 @@
 apm-server:
-  hosts: apm-server:7200
+  hosts: apm-server:8200
   shutdown_timeout: 15s
-  secret_token: somerandomstring
 output.elasticsearch:
   hosts: ['elasticsearch:9200']
 setup.kibana:

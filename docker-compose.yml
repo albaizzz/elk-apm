@@ -1,25 +1,24 @@
 version: "3"
 
 services:
- 
     apm-server:
         container_name: apm-server-container
-        image: store/elastic/apm-server:7.2.1
+        image: store/elastic/apm-server:7.1.1
         user: apm-server
         ports:
-            - "7200:7200"
+            - "8200:8200"
         depends_on: ["elasticsearch", "kibana"]
         volumes:
             - ./apm-conf/apm-server.yml:/usr/share/apm-server/apm-server.yml
-        command: /usr/share/apm-server/apm-server -e -c /usr/share/apm-server/apm-server.yml -E apm-server.host=apm-server:7200 --strict.perms=false
+        command: /usr/share/apm-server/apm-server -e -c /usr/share/apm-server/apm-server.yml -E apm-server.host=apm-server:8200 --strict.perms=false
         healthcheck:
-            test: ["CMD", "curl", "-s", "-f", "http://localhost:7200/polls"]
+            test: ["CMD", "curl", "-s", "-f", "http://localhost:8200/polls"]
             retries: 6
-        
-
+        networks:
+            - elk
     elasticsearch:
         container_name: elasticsearch-container
-        image: docker.io/elasticsearch:7.2.1
+        image: docker.io/elasticsearch:7.1.1
         environment:
                 discovery.type: single-node
         ulimits:
@@ -31,26 +30,30 @@ services:
         ports:
             - "9200:9200"
             - "9300:9300"
+        networks:
+            - elk
         healthcheck:
             test: ["CMD", "curl","-s" ,"-f", "http://localhost:9200/_cat/health"]
-    
     kibana:
         container_name: kibana-container
         hostname: kibana
-        image: docker.io/kibana:7.2.1
+        image: docker.io/kibana:7.1.1
         #volumes:
         #  - ./kibana.yml:/usr/share/kibana/kibana.yml
         environment:
             ELASTICSEARCH_HOSTS: http://elasticsearch:9200
         ports: ['5601:5601']
-        # depends_on: ["elasticsearch"]
+        networks:
+            - elk
+        depends_on: ["elasticsearch"]
         restart: on-failure
         healthcheck:
             test: ["CMD", "curl", "-s", "-f", "http://localhost:5601/"]
             retries: 6
-        
-    
-
 volumes:
     esdata:
         driver: local
+networks:
+  elk:
+    driver: bridge
+    name: elk
